@@ -41,7 +41,7 @@ def main(cfg, device):
     # DATA
     #=================#
     
-    _data, data_ = bench.load_dataset(
+    _data, data_, y_normalizer = bench.load_dataset(
         cfg.dataset,
         DATADIR_BASE,
         PROJDIR,
@@ -53,6 +53,7 @@ def main(cfg, device):
         init_case=cfg.init_case,
         exclude=cfg.exclude,
         train_rollout_noise=cfg.train_rollout_noise,
+        supernodes=cfg.supernodes
     )
     
     if cfg.dataset in ['elasticity', 'darcy']:
@@ -134,6 +135,19 @@ def main(cfg, device):
                 n_head=cfg.num_heads, mlp_ratio=cfg.mlp_ratio, num_slices=cfg.num_slices,
                 qk_norm=cfg.qk_norm,
             )
+        elif cfg.model_type == 7:
+            model = am.UPT_t( # Universal Physics Transformers
+                in_dim=c_in, out_dim=c_out, data = _data,
+                n_hidden=cfg.hidden_dim, n_layers=cfg.num_layers,
+                n_head=cfg.num_heads, mlp_ratio=cfg.mlp_ratio,
+                num_latent=cfg.num_slices
+            )
+        elif cfg.model_type == 8:
+            model = am.LNO( # Latent Neural Operator
+                n_block = cfg.num_layers, n_mode = cfg.num_slices, n_dim = cfg.hidden_dim ,
+                n_head = cfg.num_heads, n_layer = 1, x_dim = c_in - 9, y1_dim = c_in + 1,
+                y2_dim = 2, attn="Attention_Vanilla", act="GELU"
+            )
         else:
             raise NotImplementedError("No time-conditioned model selected.")
     else:
@@ -206,7 +220,7 @@ def main(cfg, device):
             device=device, gnn_loader=gnn_loader, stats_every=cfg.epochs//10,
             make_optimizer=bench.make_optimizer, weight_decay=cfg.weight_decay, epochs=cfg.epochs,
             _batch_size=_batch_size, batch_size_=batch_size_, _batch_size_=_batch_size_,
-            lossfun=lossfun, clip_grad_norm=1.,
+            lossfun=lossfun, clip_grad_norm=cfg.clip_grad_norm,
         )
         
         # LR scheduler
@@ -225,6 +239,9 @@ def main(cfg, device):
         # Noise schedule
         kw['noise_schedule'] = cfg.noise_schedule
         kw['noise_init'] = cfg.noise_init
+
+        # Normalizer
+        kw['y_normalizer'] = y_normalizer
 
         #-------------#
         # make Trainer
@@ -306,6 +323,7 @@ class Config:
     init_case: int = 0
     exclude: bool = True
     train_rollout_noise: float = 0.
+    supernodes: int=0
 
     # training arguments
     epochs: int = 100
@@ -317,6 +335,7 @@ class Config:
     one_cycle_div_factor: float = 25
     one_cycle_final_div_factor: float = 4
     one_cycle_three_phase: bool = False
+    clip_grad_norm = 0.1
 
     # model
     model_type: int = 0 # 0: Transolver, 1: TS1, ..., -1: MeshGraphNet

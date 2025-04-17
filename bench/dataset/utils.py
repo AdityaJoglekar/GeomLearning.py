@@ -20,7 +20,8 @@ def load_dataset(
         init_step: int = None,
         init_case: int = None,
         exclude: bool = True,
-        train_rollout_noise: float = 0.
+        train_rollout_noise: float = 0.,
+        supernodes: int = 0
     ):
     """Load a dataset by name.
     
@@ -50,12 +51,12 @@ def load_dataset(
         train_data = Subset(dataset, range(ntrain))
         test_data = Subset(dataset, range(len(dataset)-ntest, len(dataset)))
         
-        return train_data, test_data
+        return train_data, test_data, y_normalizer
         
     elif dataset_name in ['airfoil', 'cylinder_flow']:
         DATADIR = os.path.join(DATADIR_BASE, 'MeshGraphNets', dataset_name)
 
-        transform_kwargs = dict(mesh=mesh, cells=cells, train_rollout_noise=train_rollout_noise)
+        transform_kwargs = dict(mesh=mesh, cells=cells, train_rollout_noise=train_rollout_noise, supernodes = supernodes)
         
         dataset_kwargs = dict(
             force_reload=force_reload,
@@ -73,7 +74,7 @@ def load_dataset(
         test_data.transform.apply_normalization_stats(train_data.norm_stats)
         
         # Looks like there is some disparity bw train_data and test_data
-        train_data, test_data = split_timeseries_dataset(train_data, split=[0.8, 0.2])
+        # train_data, test_data = split_timeseries_dataset(train_data, split=[0.8, 0.2])
         
         return train_data, test_data
         

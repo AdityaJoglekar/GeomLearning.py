@@ -85,7 +85,9 @@ class SliceAttention(nn.Module):
         # (1) Get slice weights
         self.wt_kv_proj = nn.Linear(self.hidden_dim, 2 * self.hidden_dim)
         self.wt_q_proj = nn.Sequential(nn.SiLU(), nn.Linear(self.hidden_dim, self.head_dim * self.num_slices),)
-        self.alpha = nn.Parameter(torch.ones([self.num_heads]))
+        # self.alpha = nn.Parameter(torch.ones([self.num_heads]))
+        self.alpha = nn.Parameter(torch.ones([1, self.num_heads, 1, 1]) * 0.5)
+        # self.alpha = nn.Parameter(torch.ones([1, self.num_heads, 1, 1]) * (self.head_dim**(-0.5)))
 
         # (2) Attention among slice tokens
         self.qkv_proj = nn.Parameter(torch.empty(self.num_heads, self.head_dim, 3 * self.head_dim))

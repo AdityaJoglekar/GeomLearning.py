@@ -20,6 +20,49 @@ __all__ = [
     'Trainer',
 ]
 
+class TestLoss(object):
+    def __init__(self, d=2, p=2, size_average=True, reduction=True):
+        super(TestLoss, self).__init__()
+
+        assert d > 0 and p > 0
+
+        self.d = d
+        self.p = p
+        self.reduction = reduction
+        self.size_average = size_average
+
+    def abs(self, x, y):
+        num_examples = x.size()[0]
+
+        h = 1.0 / (x.size()[1] - 1.0)
+
+        all_norms = (h ** (self.d / self.p)) * torch.norm(x.view(num_examples, -1) - y.view(num_examples, -1), self.p,
+                                                          1)
+
+        if self.reduction:
+            if self.size_average:
+                return torch.mean(all_norms)
+            else:
+                return torch.sum(all_norms)
+
+        return all_norms
+
+    def rel(self, x, y):
+        num_examples = x.size()[0]
+
+        diff_norms = torch.norm(x.reshape(num_examples, -1) - y.reshape(num_examples, -1), self.p, 1)
+        y_norms = torch.norm(y.reshape(num_examples, -1), self.p, 1)
+        if self.reduction:
+            if self.size_average:
+                return torch.mean(diff_norms / y_norms)
+            else:
+                return torch.sum(diff_norms / y_norms)
+
+        return diff_norms / y_norms
+
+    def __call__(self, x, y):
+        return self.rel(x, y)
+
 #======================================================================#
 
 class Trainer:
@@ -64,6 +107,8 @@ class Trainer:
         print_batch=True,
         print_epoch=True,
         stats_every=1, # stats every k epochs
+
+        y_normalizer = None
     ):
         
         ###
@@ -148,6 +193,7 @@ class Trainer:
 
         self.lossfun = nn.MSELoss() if lossfun is None else lossfun
         self.batch_lossfun = batch_lossfun
+        self.rell2loss = TestLoss(size_average=False)
 
         ###
         # iteration
@@ -203,6 +249,8 @@ class Trainer:
         self.num_steps_fullbatch  = []
         self.train_loss_fullbatch = []
         self.test_loss_fullbatch  = []
+        
+        self.y_normalizer = y_normalizer
         
         ###
         # Callbacks
@@ -348,8 +396,9 @@ class Trainer:
 
             self.trigger_callbacks("epoch_start")
             self.train_epoch()
-            if (self.epoch % self.stats_every) == 0:
-                self.statistics()
+            if self.epoch !=0:
+                if (self.epoch % self.stats_every) == 0 or (self.epoch == self.epochs):
+                    self.statistics()
             self.trigger_callbacks("epoch_end")
             if self.update_schedule_every_epoch:
                 self.schedule.step()
@@ -441,11 +490,20 @@ class Trainer:
         self.model.eval()
 
         N, L = 0, 0.0
+        rel_error = 0
         for batch in loader:
             n = self.get_batch_size(batch, loader)
             l = self.batch_loss(batch).item()
             N += n
             L += l * n
+            # print('N',N)
+            x = batch[0].to(self.device)
+            y = batch[1].to(self.device)
+            yh = self.model(x.to(self.device))
+            yh = self.y_normalizer.decode(yh)
+            y = self.y_normalizer.decode(y)
+            rel_loss = self.rell2loss(yh,y)
+            rel_error += rel_loss.item()
             
         if self.DDP:
             L = torch.tensor(L, device=self.device)
@@ -458,6 +516,10 @@ class Trainer:
             loss = float('nan')
         else:
             loss = L / N
+            print('len(loader)',len(loader))
+            print('N',N)
+            rel_error = rel_loss/N
+            print('rel_error',rel_error)
 
         return loss, None
 

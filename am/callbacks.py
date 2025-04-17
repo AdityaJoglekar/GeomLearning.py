@@ -352,8 +352,9 @@ def timeseries_statistics_plot(df, metric, mode, filename=None, dpi=175):
     elif metric == 'l2':
         plt.ylim(0., 1e-1) # 10% error
         plt.ylabel('RMSE (normalized)')
-        df = df.apply(lambda x: np.sqrt(x))
-        plt.title('Mean RMSE (normalized): {:.2e}'.format(df.mean().mean()))
+        # df = df.apply(lambda x: np.sqrt(x))
+        # plt.title('Mean RMSE (normalized): {:.2e}'.format(df.mean().mean()))
+        plt.title('Mean RMSE (normalized): {:.2e}'.format((df.mean().mean())**0.5))
 
     if mode == 'median':
         medians = df.median(axis=1)

@@ -49,11 +49,11 @@ class UnitTransformer():
         self.std = X.std(dim=(0, 1), keepdim=True) + 1e-8
 
     def encode(self, x):
-        x = (x - self.mean) / (self.std)
+        x = (x - self.mean.to(x.device)) / (self.std.to(x.device))
         return x
 
     def decode(self, x):
-        return x * self.std + self.mean
+        return x * self.std.to(x.device) + self.mean.to(x.device)
 
     def transform(self, X, inverse=True, component='all'):
         if component == 'all' or 'all-reduce':

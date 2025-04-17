@@ -26,6 +26,7 @@ class TimeseriesDatasetTransform:
         self.orig  = orig
         self.metadata = metadata
         self.train_rollout_noise = train_rollout_noise
+        self.supernodes = 0
         
         assert self.train_rollout_noise >= 0.
 
@@ -124,14 +125,26 @@ class TimeseriesDatasetTransform:
         
         # Training noise? See MeshGraphNets paper
 
-        data = self.make_pyg_data(
-            graph,
-            edge_attr,
-            x=x, y=y,
-            t=t, T=T,
-            mask=mask
-        )
-        
+        #UPT supernode selection
+        if self.supernodes:
+            supernodes_idxs = torch.randperm(len(pos))[:self.supernodes]
+            data = self.make_pyg_data(
+                graph,
+                edge_attr,
+                x=x, y=y,
+                t=t, T=T,
+                mask=mask,
+                supernodes_idxs = supernodes_idxs
+            )
+        else:
+            data = self.make_pyg_data(
+                graph,
+                edge_attr,
+                x=x, y=y,
+                t=t, T=T,
+                mask=mask
+            )
+            
         del graph
 
         return data
