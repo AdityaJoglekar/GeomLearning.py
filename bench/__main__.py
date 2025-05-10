@@ -124,6 +124,24 @@ def main(cfg, device):
                     x_dim=c_in, y1_dim=c_in, y2_dim=c_out,
                     model_attr={"time": time_cond,}
             )
+        elif cfg.model_type == -3:
+            model = bench.LNO_new(
+                    n_block=1, n_mode=256, n_dim=192, n_head=8, n_layer=3, act="GELU",
+                    x_dim=c_in, y1_dim=c_in, y2_dim=c_out,
+                    model_attr={"time": time_cond,}, n_LNO = 3
+            )
+        # elif cfg.model_type == -4:
+        #     model = bench.LNO_unet(
+        #             n_block=1, n_mode=256, n_dim=192, n_head=8, n_layer=3, act="GELU",
+        #             x_dim=c_in, y1_dim=c_in, y2_dim=c_out,
+        #             model_attr={"time": time_cond,}, n_LNO = 0
+        #     )
+        elif cfg.model_type == -4:
+            model = bench.LNO_unet(
+                    n_block=1, n_mode=128, n_dim=128, n_head=8, n_layer=1, act="GELU",
+                    x_dim=c_in, y1_dim=c_in, y2_dim=c_out,
+                    model_attr={"time": time_cond,}, n_LNO = 3
+            )
         elif cfg.model_type == -1:
             model = am.MeshGraphNet(c_in, c_edge, c_out, cfg.hidden_dim, cfg.num_layers)
         elif cfg.model_type == 0:

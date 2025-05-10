@@ -211,5 +211,27 @@ class CNO(torch.nn.Module):
             module.weight.data.fill_(1.0)
             module.bias.data.zero_()
 
+
+class LNO_new(torch.nn.Module):
+    def __init__(self, n_block, n_mode, n_dim, n_head, n_layer, x_dim, y1_dim, y2_dim, act, model_attr, n_LNO):
+        super().__init__()
+        
+        self.LNO_blocks =  torch.nn.Sequential(*[LNO(
+                    n_block=n_block, n_mode=n_mode, n_dim=n_dim, n_head=n_head, n_layer=n_layer, act=act,
+                    x_dim=x_dim, y1_dim=y1_dim, y2_dim=y2_dim,
+                    model_attr=model_attr
+            ) for _ in range(0, n_LNO)])
+    
+
+    def forward(self, x, y=None):
+        if y is None:
+            y = x
+        
+        for block in self.LNO_blocks:
+            z = block(z)
+        
+        return r
+
+
 #======================================================================#
 #
